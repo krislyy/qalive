@@ -5,7 +5,7 @@ import (
 	"time"
 	"github.com/zhangpeihao/goflv"
 	rtmp "github.com/zhangpeihao/gortmp"
-	"gome.com/qalive/configure"
+	"github.com/qalive/configure"
 	"context"
 )
 

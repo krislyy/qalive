@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"log"
 	"flag"
-	"gome.com/qalive/configure"
+	"github.com/qalive/configure"
 	"io/ioutil"
 	"fmt"
-	"gome.com/qalive/core"
-	"gome.com/qalive/rtmp"
+	"github.com/qalive/core"
+	"github.com/qalive/rtmp"
 )
 
 

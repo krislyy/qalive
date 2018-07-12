@@ -3,7 +3,7 @@ package core
 import (
     "github.com/nareix/joy4/format"
     "github.com/nareix/joy4/format/rtmp"
-	"gome.com/qalive/configure"
+	"github.com/qalive/configure"
 	"github.com/nareix/joy4/av"
 )
 
