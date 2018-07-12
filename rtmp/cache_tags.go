@@ -1,7 +1,7 @@
 package rtmp
 
 import (
-	"github.com/qalive/configure"
+	"github.com/krislyy/qalive/configure"
 	"github.com/zhangpeihao/goflv"
 	"fmt"
 )

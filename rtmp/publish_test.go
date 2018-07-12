@@ -3,7 +3,7 @@ package rtmp
 import (
 	"testing"
 
-	"github.com/qalive/configure"
+	"github.com/krislyy/qalive/configure"
 	"sync"
 )
 
