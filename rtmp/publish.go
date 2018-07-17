@@ -114,8 +114,7 @@ func publish(stream rtmp.OutboundStream) {
 func RTMP_Publish(conf *configure.Configure)  {
 	config = conf
 	defer func() {
-		err := recover()
-		if err != nil {
+		if e := recover(); e != nil {
 		}
 	}()
 	
@@ -150,7 +149,7 @@ func RTMP_Publish(conf *configure.Configure)  {
 			}
 
 		case <-time.After(1 * time.Second):
-			fmt.Printf("Audio size: %d bytes; Vedio size: %d bytes\n", audioDataSize, videoDataSize)
+			//fmt.Printf("Audio size: %d bytes; Vedio size: %d bytes\n", audioDataSize, videoDataSize)
 
 		case <-ctx.Done():
 			fmt.Println("RTMP stream closed!")
