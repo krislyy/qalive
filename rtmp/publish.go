@@ -7,6 +7,8 @@ import (
 	rtmp "github.com/zhangpeihao/gortmp"
 	"github.com/krislyy/qalive/configure"
 	"context"
+	"net/http"
+	"io/ioutil"
 )
 
 const (
@@ -117,7 +119,7 @@ func RTMP_Publish(conf *configure.Configure)  {
 		if e := recover(); e != nil {
 		}
 	}()
-	
+
 	createStreamChan = make(chan rtmp.OutboundStream)
 	outHandler := &OutboundConnHandler{}
 	fmt.Println("to dial")
@@ -153,6 +155,8 @@ func RTMP_Publish(conf *configure.Configure)  {
 
 		case <-ctx.Done():
 			fmt.Println("RTMP stream closed!")
+			//send httpGet stopTask api
+			httpGet();
 			return
 		}
 	}
@@ -160,4 +164,20 @@ func RTMP_Publish(conf *configure.Configure)  {
 
 func RTMP_Stop(conf *configure.Configure) {
 	cancel()
+}
+
+func httpGet() {
+	resp, err := http.Get("http://localhost:8081/api/stopTask?stream=001")
+	if err != nil {
+		fmt.Println("http get error " + err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+		fmt.Println("http get ioutil readall error " + err.Error())
+		return
+	}
+	fmt.Println(string(body))
 }
