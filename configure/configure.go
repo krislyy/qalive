@@ -12,7 +12,7 @@ type Configure struct {
 	PlayList  	[]string `json:"playlist`
 	Crtmp_url 	string   `json:"rtmp_url"`
 	StreamName 	string   `json:"streamName"`
-	Token		string   `json:"token"`
+	Params		string   `json:"params"`
 }
 
 func (self *Configure)GetPlayList() []string {

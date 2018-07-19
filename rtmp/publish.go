@@ -8,7 +8,6 @@ import (
 	"github.com/krislyy/qalive/configure"
 	"context"
 	"net/http"
-	"io/ioutil"
 )
 
 const (
@@ -144,8 +143,8 @@ func RTMP_Publish(conf *configure.Configure)  {
 		case stream := <-createStreamChan:
 			// Publish
 			stream.Attach(outHandler)
-			if config.Token != "" {
-				err = stream.Publish(config.StreamName + "?" + config.Token, "live")
+			if config.Params != "" {
+				err = stream.Publish(config.StreamName + "?" + config.Params, "live")
 			} else {
 				err = stream.Publish(config.StreamName, "live")
 			}
