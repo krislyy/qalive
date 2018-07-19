@@ -12,6 +12,7 @@ type Configure struct {
 	PlayList  	[]string `json:"playlist`
 	Crtmp_url 	string   `json:"rtmp_url"`
 	StreamName 	string   `json:"streamName"`
+	Token		string   `json:"token"`
 }
 
 func (self *Configure)GetPlayList() []string {
@@ -35,7 +36,7 @@ func (self *Configure)GetTempFlvPath() string {
 
 func (self *Configure)IsPushValid() bool {
 	return len(self.PlayList) > 0 && self.Crtmp_url != "" &&
-		   self.DefaultDir != "" && self.StreamName != ""
+		self.DefaultDir != "" && self.StreamName != ""
 }
 
 func (self *Configure)IsCopyValid() bool {

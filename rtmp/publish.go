@@ -144,7 +144,12 @@ func RTMP_Publish(conf *configure.Configure)  {
 		case stream := <-createStreamChan:
 			// Publish
 			stream.Attach(outHandler)
-			err = stream.Publish(config.StreamName, "live")
+			if config.Token != "" {
+				err = stream.Publish(config.StreamName + "?" + config.Token, "live")
+			} else {
+				err = stream.Publish(config.StreamName, "live")
+			}
+
 			if err != nil {
 				str := fmt.Sprintf("Publish error: %s", err.Error())
 				panic(str)
@@ -173,11 +178,4 @@ func httpGet() {
 		return
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		// handle error
-		fmt.Println("http get ioutil readall error " + err.Error())
-		return
-	}
-	fmt.Println(string(body))
 }
