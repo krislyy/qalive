@@ -61,7 +61,7 @@ func (handler *OutboundConnHandler) OnPublishStart(stream rtmp.OutboundStream) {
 
 func (handler *OutboundConnHandler) publish(stream rtmp.OutboundStream) {
 	var err error
-	cacheTags := NewCacheTags(20, handler.Config)
+	cacheTags := NewCacheTags(8, handler.Config)
 	go cacheTags.StartCache()
 	fmt.Println("2")
 	startTs := uint32(0)
