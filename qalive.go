@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"log"
 	"flag"
-	"github.com/krislyy/qalive/configure"
 	"io/ioutil"
 	"fmt"
+	"sync"
+
+	"github.com/krislyy/qalive/configure"
 	"github.com/krislyy/qalive/core"
 	"github.com/krislyy/qalive/rtmp"
 )
@@ -36,7 +38,8 @@ func (r *Response) SendJson() (int, error) {
 }
 
 type Server struct {
-	Config *configure.Configure
+	Config 	 *configure.Configure
+	Sessions sync.Map
 }
 
 func NewServer() *Server {
@@ -100,7 +103,7 @@ func (s *Server)handlePush(w http.ResponseWriter, r *http.Request)  {
 	response := &Response{
 		w: w,
 		Status: 200,
-		Message: "Rtmp push stream success!",
+		Message: "rtmp push stream success!",
 	}
 	defer response.SendJson()
 
@@ -126,7 +129,10 @@ func (s *Server)handlePush(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	go rtmp.RTMP_Publish(s.Config)
+	session := &rtmp.RTMP_Session{ Finished: false }
+	s.Sessions.Store(s.Config.String(), session)
+	go session.Publish(s.Config)
+	log.Println("publish rtmp session: " + s.Config.String())
 }
 
 func (s *Server)handleStop(w http.ResponseWriter, r *http.Request)  {
@@ -134,7 +140,7 @@ func (s *Server)handleStop(w http.ResponseWriter, r *http.Request)  {
 	response := &Response{
 		w: w,
 		Status: 200,
-		Message: "Stop rtmp stream success!",
+		Message: "stop rtmp stream success!",
 	}
 	defer response.SendJson()
 
@@ -160,21 +166,30 @@ func (s *Server)handleStop(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	go rtmp.RTMP_Stop(s.Config)
+	session, ok := s.Sessions.Load(s.Config.String())
+	if ok {
+		go session.(*rtmp.RTMP_Session).Stop()
+		s.Sessions.Delete(s.Config.String())
+		log.Println("stop rtmp session: " + s.Config.String())
+	}
 }
 
 func main() {
+	checkError()
 	opListen, err := net.Listen("tcp", *operaAddr)
 	defer opListen.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
 	opServer := NewServer()
+	log.Println("HTTP-Operation listen On", *operaAddr)
+	opServer.Serve(opListen)
+}
+
+func checkError() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("HTTP-Operation server panic: ", r)
 		}
 	}()
-	log.Println("HTTP-Operation listen On", *operaAddr)
-	opServer.Serve(opListen)
 }

@@ -3,11 +3,12 @@ package rtmp
 import (
 	"fmt"
 	"time"
+	"context"
+	"net/http"
+
 	"github.com/zhangpeihao/goflv"
 	rtmp "github.com/zhangpeihao/gortmp"
 	"github.com/krislyy/qalive/configure"
-	"context"
-	"net/http"
 )
 
 const (
@@ -16,29 +17,27 @@ const (
 )
 
 type OutboundConnHandler struct {
+	VideoDataSize 		int64
+	AudioDataSize 		int64
+	Status 				uint
+	CreateStreamChan 	chan rtmp.OutboundStream
+	CancelFunc 			context.CancelFunc
+	ObConn 				rtmp.OutboundConn
+	Config 				configure.Configure
 }
-
-var obConn rtmp.OutboundConn
-var createStreamChan chan rtmp.OutboundStream
-var videoDataSize int64
-var audioDataSize int64
-var config *configure.Configure
-var cancel context.CancelFunc
-
-var status uint
 
 func (handler *OutboundConnHandler) OnStatus(conn rtmp.OutboundConn) {
 	var err error
-	if obConn == nil {
+	if handler.ObConn == nil {
 		return
 	}
-	status, err = obConn.Status()
-	fmt.Printf("@@@@@@@@@@@@@status: %d, err: %v\n", status, err)
+	handler.Status, err = handler.ObConn.Status()
+	fmt.Printf("@@@@@@@@@@@@@status: %d, err: %v\n", handler.Status, err)
 }
 
 func (handler *OutboundConnHandler) OnClosed(conn rtmp.Conn) {
 	fmt.Printf("@@@@@@@@@@@@@Closed\n")
-	cancel()
+	handler.CancelFunc()
 }
 
 func (handler *OutboundConnHandler) OnReceived(conn rtmp.Conn, message *rtmp.Message) {
@@ -50,26 +49,26 @@ func (handler *OutboundConnHandler) OnReceivedRtmpCommand(conn rtmp.Conn, comman
 
 func (handler *OutboundConnHandler) OnStreamCreated(conn rtmp.OutboundConn, stream rtmp.OutboundStream) {
 	fmt.Printf("Stream created: %d\n", stream.ID())
-	createStreamChan <- stream
+	handler.CreateStreamChan <- stream
 }
 func (handler *OutboundConnHandler) OnPlayStart(stream rtmp.OutboundStream) {
 
 }
 func (handler *OutboundConnHandler) OnPublishStart(stream rtmp.OutboundStream) {
 	// Set chunk buffer size
-	go publish(stream)
+	go handler.publish(stream)
 }
 
-func publish(stream rtmp.OutboundStream) {
+func (handler *OutboundConnHandler) publish(stream rtmp.OutboundStream) {
 	var err error
-	cacheTags := NewCacheTags(20, *config)
+	cacheTags := NewCacheTags(20, handler.Config)
 	go cacheTags.StartCache()
 	fmt.Println("2")
 	startTs := uint32(0)
 	startAt := time.Now().UnixNano()
 	fmt.Println("3")
 	for tag := range cacheTags.TagCh {
-		if status != rtmp.OUTBOUND_CONN_STATUS_CREATE_STREAM_OK {
+		if handler.Status != rtmp.OUTBOUND_CONN_STATUS_CREATE_STREAM_OK {
 			fmt.Println("@@@@@@@@@@@@@@Create stream not ready")
 			cacheTags.Quit = true
 			break
@@ -83,9 +82,9 @@ func publish(stream rtmp.OutboundStream) {
 
 		switch tag.TagType {
 		case flv.VIDEO_TAG:
-			videoDataSize += int64(len(tag.Data))
+			handler.VideoDataSize += int64(len(tag.Data))
 		case flv.AUDIO_TAG:
-			audioDataSize += int64(len(tag.Data))
+			handler.AudioDataSize += int64(len(tag.Data))
 		}
 
 		if startTs == uint32(0) {
@@ -110,43 +109,50 @@ func publish(stream rtmp.OutboundStream) {
 			time.Sleep(time.Millisecond * time.Duration(diff1-diff2))
 		}
 	}
+	//send httpGet stopTask api
+	resp, err := http.Get("http://localhost:8081/api/stopTask?stream=" + handler.Config.StreamName)
+	if err != nil {
+		fmt.Println("http get error " + err.Error())
+		return
+	}
+	defer resp.Body.Close()
 }
 
-func RTMP_Publish(conf *configure.Configure)  {
-	config = conf
-	defer func() {
-		if e := recover(); e != nil {
-		}
-	}()
+type RTMP_Session struct {
+	outHandler *OutboundConnHandler
+	Finished   bool
+}
 
-	createStreamChan = make(chan rtmp.OutboundStream)
-	outHandler := &OutboundConnHandler{}
-	fmt.Println("to dial")
-	fmt.Println("a")
+func (rs *RTMP_Session) Publish(conf *configure.Configure)  {
+	checkError()
+	rs.outHandler = &OutboundConnHandler{
+		CreateStreamChan: make(chan rtmp.OutboundStream),
+		Config: *conf,
+	}
 	var err error
-	obConn, err = rtmp.Dial(config.Crtmp_url, outHandler, 100)
+	rs.outHandler.ObConn, err = rtmp.Dial(rs.outHandler.Config.Crtmp_url, rs.outHandler, 100)
 	if err != nil {
 		panic(fmt.Sprintf("Dial error %s", err.Error()))
 	}
 	fmt.Println("b")
-	defer obConn.Close()
+	defer rs.outHandler.ObConn.Close()
 	fmt.Println("to connect")
-	err = obConn.Connect()
+	err = rs.outHandler.ObConn.Connect()
 	if err != nil {
 		panic(fmt.Sprintf("Connect error: %s", err.Error()))
 	}
 	fmt.Println("c")
 	var ctx context.Context
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, rs.outHandler.CancelFunc = context.WithCancel(context.Background())
 	for {
 		select {
-		case stream := <-createStreamChan:
+		case stream := <-rs.outHandler.CreateStreamChan:
 			// Publish
-			stream.Attach(outHandler)
-			if config.Params != "" {
-				err = stream.Publish(config.StreamName + "?" + config.Params, "live")
+			stream.Attach(rs.outHandler)
+			if rs.outHandler.Config.Params != "" {
+				err = stream.Publish(rs.outHandler.Config.StreamName + "?" + rs.outHandler.Config.Params, "live")
 			} else {
-				err = stream.Publish(config.StreamName, "live")
+				err = stream.Publish(rs.outHandler.Config.StreamName, "live")
 			}
 
 			if err != nil {
@@ -155,26 +161,26 @@ func RTMP_Publish(conf *configure.Configure)  {
 			}
 
 		case <-time.After(1 * time.Second):
-			//fmt.Printf("Audio size: %d bytes; Vedio size: %d bytes\n", audioDataSize, videoDataSize)
+			fmt.Printf("Audio size: %d bytes; Vedio size: %d bytes\n", rs.outHandler.AudioDataSize, rs.outHandler.VideoDataSize)
 
 		case <-ctx.Done():
 			fmt.Println("RTMP stream closed!")
-			//send httpGet stopTask api
-			httpGet();
+			rs.Finished = true
 			return
 		}
 	}
 }
 
-func RTMP_Stop(conf *configure.Configure) {
-	cancel()
+func (rs *RTMP_Session) Stop() {
+	if !rs.Finished {
+		rs.outHandler.CancelFunc()
+	}
 }
 
-func httpGet() {
-	resp, err := http.Get("http://localhost:8081/api/stopTask?stream=001")
-	if err != nil {
-		fmt.Println("http get error " + err.Error())
-		return
-	}
-	defer resp.Body.Close()
+func checkError() {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Println("RTMP_Session panic: ", e)
+		}
+	}()
 }

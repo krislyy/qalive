@@ -31,3 +31,11 @@ func AsyncCopyPackets(configure *configure.Configure) {
 		writer.CloseCh <- true
 	}
 }
+
+// check error and recover
+func checkError() {
+	defer func() {
+		if e := recover(); e != nil {
+		}
+	}()
+}

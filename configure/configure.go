@@ -36,9 +36,13 @@ func (self *Configure)GetTempFlvPath() string {
 
 func (self *Configure)IsPushValid() bool {
 	return len(self.PlayList) > 0 && self.Crtmp_url != "" &&
-		self.DefaultDir != "" && self.StreamName != ""
+		   self.DefaultDir != "" && self.StreamName != ""
 }
 
 func (self *Configure)IsCopyValid() bool {
 	return len(self.SrcList) > 0 && self.DefaultDir != "" && self.StreamName != ""
+}
+
+func (self *Configure)String() string {
+	return self.Crtmp_url + "|" + self.StreamName + "|key interface{}"
 }

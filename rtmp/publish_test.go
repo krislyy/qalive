@@ -2,9 +2,8 @@ package rtmp
 
 import (
 	"testing"
-
-	"github.com/krislyy/qalive/configure"
 	"sync"
+	"github.com/krislyy/qalive/configure"
 )
 
 func TestPublish(t *testing.T) {
@@ -16,6 +15,7 @@ func TestPublish(t *testing.T) {
 		StreamName:"movie",
 		PlayList: []string{"demo1", "demo2", "demo3"},
 	}
-	go RTMP_Publish(config)
+	session := RTMP_Session{ Finished:false }
+	go session.Publish(config)
 	wg.Wait()
 }
