@@ -13,6 +13,7 @@ func init() {
 }
 
 func AsyncCopyPackets(configure *configure.Configure) {
+	checkError()
 	// srclist
 	srclist := configure.GetSrcList()
 	for _, v := range srclist {
