@@ -175,7 +175,7 @@ func (s *Server)handleStop(w http.ResponseWriter, r *http.Request)  {
 }
 
 func main() {
-	checkError()
+	defer checkError()
 	opListen, err := net.Listen("tcp", *operaAddr)
 	defer opListen.Close()
 	if err != nil {
@@ -187,9 +187,7 @@ func main() {
 }
 
 func checkError() {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("HTTP-Operation server panic: ", r)
-		}
-	}()
+	if r := recover(); r != nil {
+		log.Println("HTTP-Operation server panic: ", r)
+	}
 }

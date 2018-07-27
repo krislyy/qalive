@@ -124,7 +124,7 @@ type RTMP_Session struct {
 }
 
 func (rs *RTMP_Session) Publish(conf *configure.Configure)  {
-	checkError()
+	defer checkError()
 	rs.outHandler = &OutboundConnHandler{
 		CreateStreamChan: make(chan rtmp.OutboundStream),
 		Config: *conf,
@@ -178,9 +178,7 @@ func (rs *RTMP_Session) Stop() {
 }
 
 func checkError() {
-	defer func() {
-		if e := recover(); e != nil {
-			fmt.Println("RTMP_Session panic: ", e)
-		}
-	}()
+	if e := recover(); e != nil {
+		fmt.Println("RTMP_Session panic: ", e)
+	}
 }
