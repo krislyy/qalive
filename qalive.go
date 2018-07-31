@@ -168,7 +168,7 @@ func (s *Server)handleStop(w http.ResponseWriter, r *http.Request)  {
 
 	session, ok := s.Sessions.Load(s.Config.String())
 	if ok {
-		go session.(*rtmp.RTMP_Session).Stop()
+		session.(*rtmp.RTMP_Session).Stop()
 		s.Sessions.Delete(s.Config.String())
 		log.Println("stop rtmp session: " + s.Config.String())
 	}
